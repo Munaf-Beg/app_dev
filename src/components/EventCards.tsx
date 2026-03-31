@@ -31,7 +31,6 @@ export const EventCard = ({ event, isSelected, onToggle,isFeatured }: Event) => 
     const CardImage=EventImage(event);
     return(
       <Surface style={styles.cardContainer}>
-        {/*image*/}
         <View style={styles.imageContainer}>
             <Image 
                 source={CardImage}
@@ -71,7 +70,6 @@ export const EventCard = ({ event, isSelected, onToggle,isFeatured }: Event) => 
                     </Text>
                 </View>
             </View>
-            {/* 2. Save Button */}
             <TouchableOpacity 
                 style={[styles.saveBtn, isSelected && styles.savedBtn]} 
                 onPress={onToggle}
@@ -93,7 +91,7 @@ export const EventCard = ({ event, isSelected, onToggle,isFeatured }: Event) => 
 const styles = StyleSheet.create({
     cardContainer:{
         overflow: 'hidden',
-        backgroundColor: '#1A1C1E',
+        backgroundColor: 'rgba(26, 28, 30, 0.9)',
         flexDirection: 'column', 
         justifyContent: 'space-between',  
         width: '92%', 
