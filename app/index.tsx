@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState, useRef ,useCallback } from 'react'
-import * as SplashScreen from 'expo-splash-screen';
 import Fuse from 'fuse.js';
 import {
   SafeAreaView,
@@ -15,8 +14,6 @@ import { Database, getEventsTotal , getEventsFromDB,FestEvents ,getSavedEvents, 
 import { EventCard } from '@/src/components/EventCards';
 
 type SortOption = 'none' | 'day-asc' | 'regs-desc';
-
-SplashScreen.preventAutoHideAsync();
 
 export default function App(){
   const CATEGORIES = [ 'Music', 'Tech', 'Dance', 'Misc'];
@@ -39,18 +36,10 @@ export default function App(){
       const initialSavedIds = await getSavedEvents();
       setSavedEventIds(initialSavedIds);
       setIsDbReady(true); 
-      await SplashScreen.hideAsync();
     };
     loadDB();
   }, []);
 
-  const onLayoutRootView = useCallback(async () => {
-    if (isDbReady) {
-      setTimeout(async () => {
-        await SplashScreen.hideAsync();
-      }, 800); 
-    }
-  }, [isDbReady]);
 
   const toggleCategory =(category:string) =>{
     if (category==='All'){
@@ -114,7 +103,7 @@ export default function App(){
   }
 
   return(
-    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+    <View style={{ flex: 1 }}>
       <PaperProvider>
         <ImageBackground 
           source={require('../assets/images/background_3.jpeg')}
