@@ -40,19 +40,6 @@ export default function App(){
     loadDB();
   }, []);
 
-  useEffect(() => {
-    const loadDB = async () => {
-      await Database();
-      const count =await getEventsTotal();
-      setTotalCount(count);
-      const events = await getEventsFromDB();
-      setAllEvents(events);
-      const initialSavedIds = await getSavedEvents();
-      setSavedEventIds(initialSavedIds);
-    };
-    loadDB();
-  }, []);
-
   const toggleCategory =(category:string) =>{
     if (category==='All'){
       setSelectedCategory([]);
