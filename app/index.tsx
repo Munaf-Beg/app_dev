@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useRef ,useCallback } from 'react'
+import * as SplashScreen from 'expo-splash-screen';
 import Fuse from 'fuse.js';
 import {
   SafeAreaView,
@@ -14,6 +15,8 @@ import { Database, getEventsTotal , getEventsFromDB,FestEvents ,getSavedEvents, 
 import { EventCard } from '@/src/components/EventCards';
 
 type SortOption = 'none' | 'day-asc' | 'regs-desc';
+
+SplashScreen.preventAutoHideAsync();
 
 export default function App(){
   const CATEGORIES = [ 'Music', 'Tech', 'Dance', 'Misc'];
@@ -36,9 +39,18 @@ export default function App(){
       const initialSavedIds = await getSavedEvents();
       setSavedEventIds(initialSavedIds);
       setIsDbReady(true); 
+      await SplashScreen.hideAsync();
     };
     loadDB();
   }, []);
+
+  const onLayoutRootView = useCallback(async () => {
+    if (isDbReady) {
+      setTimeout(async () => {
+        await SplashScreen.hideAsync();
+      }, 800); 
+    }
+  }, [isDbReady]);
 
   const toggleCategory =(category:string) =>{
     if (category==='All'){
@@ -56,14 +68,14 @@ export default function App(){
     setSortBy('none');
   };
 
-  const toggleSave = async (eventId: number) => {
+  const toggleSave = useCallback(async (eventId: number) => {
     if (!isDbReady) return;
     const isCurrentlySaved = savedEventIds.includes(eventId);
     await toggleSavedEvents(eventId, isCurrentlySaved);
     setSavedEventIds((prev) =>
       prev.includes(eventId) ? prev.filter((id) => id !== eventId) : [...prev, eventId]
     );
-  }
+  } ,[isDbReady, savedEventIds]);
 
   const fuse = useMemo(() => {
     return new Fuse(allEvents, {
@@ -97,131 +109,136 @@ export default function App(){
     return [...saved,...unsaved];
   }, [allEvents, search, selectedCategory, sortBy , savedEventIds]);
 
+  if (!isDbReady) {
+    return null;
+  }
 
   return(
-    <PaperProvider>
-      <ImageBackground 
-        source={require('../assets/images/background_3.jpeg')}
-        style={styles.backgroundWrapper}
-        resizeMode="cover"
-      >
-        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-        <SafeAreaView style={styles.container}>
-          <Text variant="displayLarge" style={styles.titleText}>Fest Event Explorer</Text>
-          <ScrollView 
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled">
-            <View style={styles.totalEvents}>
-              <View>
-                <Text style={styles.totalEventsText}>Total Events</Text>
-                <Text style={styles.totalEventsValue}>{totalCount}</Text>
+    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <PaperProvider>
+        <ImageBackground 
+          source={require('../assets/images/background_3.jpeg')}
+          style={styles.backgroundWrapper}
+          resizeMode="cover"
+        >
+          <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+          <SafeAreaView style={styles.container}>
+            <Text variant="displayLarge" style={styles.titleText}>Fest Event Explorer</Text>
+            <ScrollView 
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled">
+              <View style={styles.totalEvents}>
+                <View>
+                  <Text style={styles.totalEventsText}>Total Events</Text>
+                  <Text style={styles.totalEventsValue}>{totalCount}</Text>
+                </View>
+                <View style={[styles.iconContainer, { backgroundColor: 'rgba(72, 229, 194, 0.15)' }]}>
+                  <MaterialCommunityIcons name="calendar-check" size={28} color="#48E5C2" />
               </View>
-              <View style={[styles.iconContainer, { backgroundColor: 'rgba(72, 229, 194, 0.15)' }]}>
-                <MaterialCommunityIcons name="calendar-check" size={28} color="#48E5C2" />
-            </View>
-            </View>
-            <View style={styles.topCategory}>
-              <View>
-                <Text style={styles.topCategoryText}>Top Category</Text>
-                <Text style={styles.topCategoryValue}>Music </Text>
               </View>
-              <View style={[styles.iconContainer, { backgroundColor: 'rgba(179, 120, 211, 0.15)' }]}>
-                <MaterialCommunityIcons name="music-note" size={28} color="#B378D3" />
-              </View>
-            </View>  
-            <Searchbar                                        
-              placeholder="Search for an event..."
-              value={search}
-              onChangeText={(text) => setSearch(text)} 
-              style={styles.searchBarContainer}
-              inputStyle={styles.searchInputText}
-              placeholderTextColor="#9BA1A6"
-              iconColor="#9BA1A6"
-            />
-            {/* Category Filter */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop:15,paddingLeft:20}}>
-              <TouchableOpacity
-                onPress={() => toggleCategory('All')}
-                style={[
-                  styles.filterChip, 
-                  selectedCategory.length === 0 && styles.filterChipActive 
-                ]}
-              >
-                <Text style={[
-                  styles.filterText, 
-                  selectedCategory.length === 0 && styles.filterTextActive
-                ]}>
-                  All
-                </Text>
-              </TouchableOpacity>
-              {CATEGORIES.map((cat) => {
-                const isSelected = selectedCategory.includes(cat);
-                return (
-                  <TouchableOpacity
-                    key={cat}
-                    onPress={()=> toggleCategory(cat)}
-                    style={[styles.filterChip, isSelected && styles.filterChipActive]}>
-                      <Text style={[styles.filterText, isSelected && styles.filterTextActive]}>
-                        {cat}
-                      </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-              {/*Sort*/}
-            <View style={styles.sortContainer}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => setSortBy(prevSort => prevSort === 'day-asc' ? 'none' : 'day-asc')}
-                style={[styles.sortChip, sortBy === 'day-asc' && styles.sortChipActive]}
-              >
-                <MaterialCommunityIcons 
-                  name="calendar-outline" 
-                  size={14} 
-                  color={sortBy === 'day-asc' ? "#FFFFFF" : "#48E5C2"}
-                />
-                <Text style={[styles.sortText, sortBy === 'day-asc' && styles.sortTextActive]}>
-                  By day
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => setSortBy(prevSort => prevSort === 'regs-desc' ? 'none' : 'regs-desc')}
-                style={[styles.sortChip, sortBy === 'regs-desc' && styles.sortChipActive]}
-              >
-                <MaterialCommunityIcons 
-                  name="trending-up" 
-                  size={14} 
-                  color={sortBy === 'day-asc' ? "#FFFFFF" : "#48E5C2"}
-                />
-                <Text style={[styles.sortText, sortBy === 'regs-desc' && styles.sortTextActive]}>
-                  Top Category
-                </Text>
-              </TouchableOpacity>
-              {/*Reset button*/}
-              <View style={styles.resetContainer}>
-                <TouchableOpacity style={styles.resetBtn} onPress={resetFilters}>
-                  <Text style={styles.resetBtnText}>Clear</Text>
+              <View style={styles.topCategory}>
+                <View>
+                  <Text style={styles.topCategoryText}>Top Category</Text>
+                  <Text style={styles.topCategoryValue}>Music </Text>
+                </View>
+                <View style={[styles.iconContainer, { backgroundColor: 'rgba(179, 120, 211, 0.15)' }]}>
+                  <MaterialCommunityIcons name="music-note" size={28} color="#B378D3" />
+                </View>
+              </View>  
+              <Searchbar                                        
+                placeholder="Search for an event..."
+                value={search}
+                onChangeText={(text) => setSearch(text)} 
+                style={styles.searchBarContainer}
+                inputStyle={styles.searchInputText}
+                placeholderTextColor="#9BA1A6"
+                iconColor="#9BA1A6"
+              />
+              {/* Category Filter */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop:15,paddingLeft:20}}>
+                <TouchableOpacity
+                  onPress={() => toggleCategory('All')}
+                  style={[
+                    styles.filterChip, 
+                    selectedCategory.length === 0 && styles.filterChipActive 
+                  ]}
+                >
+                  <Text style={[
+                    styles.filterText, 
+                    selectedCategory.length === 0 && styles.filterTextActive
+                  ]}>
+                    All
+                  </Text>
                 </TouchableOpacity>
+                {CATEGORIES.map((cat) => {
+                  const isSelected = selectedCategory.includes(cat);
+                  return (
+                    <TouchableOpacity
+                      key={cat}
+                      onPress={()=> toggleCategory(cat)}
+                      style={[styles.filterChip, isSelected && styles.filterChipActive]}>
+                        <Text style={[styles.filterText, isSelected && styles.filterTextActive]}>
+                          {cat}
+                        </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+                {/*Sort*/}
+              <View style={styles.sortContainer}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setSortBy(prevSort => prevSort === 'day-asc' ? 'none' : 'day-asc')}
+                  style={[styles.sortChip, sortBy === 'day-asc' && styles.sortChipActive]}
+                >
+                  <MaterialCommunityIcons 
+                    name="calendar-outline" 
+                    size={14} 
+                    color={sortBy === 'day-asc' ? "#FFFFFF" : "#48E5C2"}
+                  />
+                  <Text style={[styles.sortText, sortBy === 'day-asc' && styles.sortTextActive]}>
+                    By day
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setSortBy(prevSort => prevSort === 'regs-desc' ? 'none' : 'regs-desc')}
+                  style={[styles.sortChip, sortBy === 'regs-desc' && styles.sortChipActive]}
+                >
+                  <MaterialCommunityIcons 
+                    name="trending-up" 
+                    size={14} 
+                    color={sortBy === 'day-asc' ? "#FFFFFF" : "#48E5C2"}
+                  />
+                  <Text style={[styles.sortText, sortBy === 'regs-desc' && styles.sortTextActive]}>
+                    Top Category
+                  </Text>
+                </TouchableOpacity>
+                {/*Reset button*/}
+                <View style={styles.resetContainer}>
+                  <TouchableOpacity style={styles.resetBtn} onPress={resetFilters}>
+                    <Text style={styles.resetBtnText}>Clear</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-            {/*Events*/}
-            <View style={styles.eventCardsContainer}>
-              {processedEvents.map((event) =>(
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  isSelected={savedEventIds.includes(event.id)}
-                  isFeatured={false}
-                  onToggle={() => toggleSave(event.id)}
-                />
-              ))}
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </ImageBackground>
-    </PaperProvider>
+              {/*Events*/}
+              <View style={styles.eventCardsContainer}>
+                {processedEvents.map((event) =>(
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    isSelected={savedEventIds.includes(event.id)}
+                    isFeatured={false}
+                    onToggle={() => toggleSave(event.id)}
+                  />
+                ))}
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </ImageBackground>
+      </PaperProvider>
+  </View>
   )
 }
 
